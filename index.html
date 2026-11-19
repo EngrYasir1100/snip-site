@@ -14,18 +14,7 @@
   details { background:var(--card); border-radius:16px; padding:14px 18px; margin:10px 0; }
   summary { font-weight:700; cursor:pointer; }
   a { color:var(--lime); } .btn { display:inline-block; background:var(--lime); color:#0B0B12; font-weight:800; padding:14px 22px; border-radius:999px; text-decoration:none; margin-top:12px; }
-  form.card { background:var(--card); border-radius:20px; padding:20px; margin-top:16px; display:grid; gap:14px; }
-  label { display:grid; gap:6px; font-weight:700; font-size:14px; color:var(--text); }
-  input, select, textarea { font:inherit; color:var(--text); background:#0F0F18; border:1px solid #2A2A3C; border-radius:12px; padding:12px 14px; width:100%; box-sizing:border-box; }
-  input:focus, select:focus, textarea:focus { outline:2px solid var(--lime); outline-offset:1px; border-color:transparent; }
-  textarea { min-height:140px; resize:vertical; }
-  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  @media (max-width:520px) { .row2 { grid-template-columns:1fr; } }
-  button.btn { border:0; font:inherit; font-weight:800; cursor:pointer; justify-self:start; }
   .hint { font-size:13px; color:var(--sub); margin:0; }
-  .hp { position:absolute; left:-9999px; }
-  #form-status { font-size:15px; font-weight:700; color:#FF8A8A; }
-  #form-status.ok { color:var(--lime); }
 </style>
 </head>
 <body><main>
@@ -35,112 +24,9 @@
 </div>
 
 <h2 id="contact">Support</h2>
-<p>Found a bug, have an idea, or need help? Send us a message. We usually reply within 48 hours.</p>
-<form class="card" id="support-form" novalidate action="https://formsubmit.co/8bb0dabb13633a67a3cca62c9beb71d6" method="POST">
-  <!-- FormSubmit settings: emails each message to the address above. -->
-  <input type="hidden" name="_subject" value="Snip support request">
-  <input type="hidden" name="_template" value="table">
-  <input type="hidden" name="_next" value="https://engryasir1100.github.io/snip-site/thanks.html">
-  <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-  <div class="row2">
-    <label>Your name<input type="text" name="name" autocomplete="name" required maxlength="80"></label>
-    <label>Your email<input type="email" name="email" autocomplete="email" required maxlength="120"></label>
-  </div>
-  <div class="row2">
-    <label>What's it about?
-      <select name="topic">
-        <option>Question / need help</option>
-        <option>Something isn't working</option>
-        <option>Snip Pro / purchase / restore</option>
-        <option>Reminders or notifications</option>
-        <option>Magic Paste</option>
-        <option>Feature idea</option>
-        <option>Something else</option>
-      </select>
-    </label>
-    <label>Your phone
-      <select name="device">
-        <option>Android</option>
-        <option>iPhone</option>
-        <option>Other / not sure</option>
-      </select>
-    </label>
-  </div>
-  <label>Message<textarea name="message" required maxlength="4000" placeholder="Tell us what happened, and what you expected."></textarea></label>
-  <p class="hint">We only use your email to reply to you. Please don't include card numbers or passwords.</p>
-  <button class="btn" type="submit">Send message</button>
-  <p class="hint" id="form-status" role="status" aria-live="polite"></p>
-</form>
-<script>
-// Send in the background so visitors never see FormSubmit's own page.
-// Without JavaScript the form still posts normally.
-(function () {
-  var form = document.getElementById('support-form');
-  var status = document.getElementById('form-status');
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    var btn = form.querySelector('button[type=submit]');
-    // Our own, visible check (phone browsers show tiny or no warnings).
-    var bad = Array.prototype.find.call(form.querySelectorAll('input[required], textarea[required]'), function (el) { return !el.checkValidity(); });
-    if (bad) {
-      status.className = '';
-      status.textContent = bad.type === 'email' && bad.value ? 'Please check your email address.' : 'Please fill in your name, email and message.';
-      bad.focus();
-      return;
-    }
-    var data = {};
-    new FormData(form).forEach(function (v, k) { data[k] = v; });
-    if (data._honey) return; // bot
-    delete data._next; delete data._honey;
-    btn.disabled = true; btn.textContent = 'Sending…'; status.textContent = '';
-    // If FormSubmit doesn't answer within 10 s, send the normal way instead of hanging on "Sending…".
-    var done = false;
-    var ctrl = window.AbortController ? new AbortController() : null;
-    var timer = setTimeout(function () {
-      if (done) return;
-      done = true;
-      if (ctrl) ctrl.abort();
-      status.className = 'ok';
-      status.textContent = 'Still sending… switching to the standard way.';
-      form.submit();
-    }, 10000);
-    fetch(form.action.replace('formsubmit.co/', 'formsubmit.co/ajax/'), {
-      signal: ctrl ? ctrl.signal : undefined,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(data)
-    })
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (res) {
-        if (done) return;
-        done = true; clearTimeout(timer);
-        if (res.ok && String(res.j.success) === 'true') { window.location.href = 'thanks.html'; return; }
-        throw new Error(res.j.message || 'Could not send');
-      })
-      .catch(function (err) {
-        if (done && !(err && err.message && /activat/i.test(err.message))) return;
-        done = true; clearTimeout(timer);
-        var network = err instanceof TypeError; // fetch blocked or offline
-        var msg = !network && err && err.message && err.message !== 'Could not send' ? err.message : '';
-        if (/activat/i.test(msg)) {
-          // Only before the form is activated: FormSubmit has emailed the site owner an activation link.
-          btn.disabled = false; btn.textContent = 'Send message';
-          status.className = 'ok';
-          status.textContent = 'Almost ready: the site owner must first click the activation link FormSubmit just emailed. ' + msg;
-          return;
-        }
-        if (network) {
-          // Network or browser blocked the background request: send the normal way instead.
-          form.submit();
-          return;
-        }
-        btn.disabled = false; btn.textContent = 'Send message';
-        status.className = '';
-        status.textContent = "Sorry, that didn't send (" + msg + '). Please try again in a minute.';
-      });
-  });
-})();
-</script>
+<p>Found a bug, have an idea, or need help? Email us and we'll usually reply within 48 hours.</p>
+<a class="btn" href="mailto:yasirakbar1100@gmail.com?subject=Snip%20support">Email yasirakbar1100@gmail.com</a>
+<p class="hint" style="margin-top:12px">Tip: tell us your phone (Android or iPhone) and what happened. Please don't send card numbers or passwords.</p>
 
 <h2>FAQ</h2>
 <details><summary>How do I cancel Snip Pro?</summary><p>On iPhone, go to Settings › your name › Subscriptions › Snip › Cancel Subscription. Cancel at least 24 hours before renewal to avoid being charged again. On Android, open the Play Store › your profile picture › Payments &amp; subscriptions › Subscriptions › Snip › Cancel subscription, or go to <a href="https://play.google.com/store/account/subscriptions">play.google.com/store/account/subscriptions</a>.</p></details>
