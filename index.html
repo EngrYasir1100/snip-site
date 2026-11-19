@@ -24,6 +24,8 @@
   button.btn { border:0; font:inherit; font-weight:800; cursor:pointer; justify-self:start; }
   .hint { font-size:13px; color:var(--sub); margin:0; }
   .hp { position:absolute; left:-9999px; }
+  #form-status { font-size:15px; font-weight:700; color:#FF8A8A; }
+  #form-status.ok { color:var(--lime); }
 </style>
 </head>
 <body><main>
@@ -34,7 +36,7 @@
 
 <h2 id="contact">Support</h2>
 <p>Found a bug, have an idea, or need help? Send us a message. We usually reply within 48 hours.</p>
-<form class="card" id="support-form" action="https://formsubmit.co/yasirakbar196@gmail.com" method="POST">
+<form class="card" id="support-form" novalidate action="https://formsubmit.co/yasirakbar196@gmail.com" method="POST">
   <!-- FormSubmit settings: emails each message to the address above. -->
   <input type="hidden" name="_subject" value="Snip support request">
   <input type="hidden" name="_template" value="table">
@@ -46,8 +48,8 @@
   </div>
   <div class="row2">
     <label>What's it about?
-      <select name="topic" required>
-        <option value="">Choose one</option>
+      <select name="topic">
+        <option>Question / need help</option>
         <option>Something isn't working</option>
         <option>Snip Pro / purchase / restore</option>
         <option>Reminders or notifications</option>
@@ -78,6 +80,14 @@
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var btn = form.querySelector('button[type=submit]');
+    // Our own, visible check (phone browsers show tiny or no warnings).
+    var bad = Array.prototype.find.call(form.querySelectorAll('input[required], textarea[required]'), function (el) { return !el.checkValidity(); });
+    if (bad) {
+      status.className = '';
+      status.textContent = bad.type === 'email' && bad.value ? 'Please check your email address.' : 'Please fill in your name, email and message.';
+      bad.focus();
+      return;
+    }
     var data = {};
     new FormData(form).forEach(function (v, k) { data[k] = v; });
     if (data._honey) return; // bot
@@ -94,10 +104,23 @@
         throw new Error(res.j.message || 'Could not send');
       })
       .catch(function (err) {
+        var network = err instanceof TypeError; // fetch blocked or offline
+        var msg = !network && err && err.message && err.message !== 'Could not send' ? err.message : '';
+        if (/activat/i.test(msg)) {
+          // Only before the form is activated: FormSubmit has emailed the site owner an activation link.
+          btn.disabled = false; btn.textContent = 'Send message';
+          status.className = 'ok';
+          status.textContent = 'Almost ready: the site owner must first click the activation link FormSubmit just emailed. ' + msg;
+          return;
+        }
+        if (network) {
+          // Network or browser blocked the background request: send the normal way instead.
+          form.submit();
+          return;
+        }
         btn.disabled = false; btn.textContent = 'Send message';
-        var msg = err && err.message && err.message !== 'Could not send' ? err.message : '';
-        // Before the form is activated, FormSubmit explains that here (shown once, to the site owner).
-        status.textContent = /activat/i.test(msg) ? msg : "Sorry, that didn't send. Please try again in a minute.";
+        status.className = '';
+        status.textContent = "Sorry, that didn't send (" + msg + '). Please try again in a minute.';
       });
   });
 })();
