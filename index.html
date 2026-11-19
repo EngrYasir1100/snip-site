@@ -93,17 +93,33 @@
     if (data._honey) return; // bot
     delete data._next; delete data._honey;
     btn.disabled = true; btn.textContent = 'Sending…'; status.textContent = '';
+    // If FormSubmit doesn't answer within 10 s, send the normal way instead of hanging on "Sending…".
+    var done = false;
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () {
+      if (done) return;
+      done = true;
+      if (ctrl) ctrl.abort();
+      status.className = 'ok';
+      status.textContent = 'Still sending… switching to the standard way.';
+      form.submit();
+    }, 10000);
     fetch(form.action.replace('formsubmit.co/', 'formsubmit.co/ajax/'), {
+      signal: ctrl ? ctrl.signal : undefined,
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(data)
     })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
+        if (done) return;
+        done = true; clearTimeout(timer);
         if (res.ok && String(res.j.success) === 'true') { window.location.href = 'thanks.html'; return; }
         throw new Error(res.j.message || 'Could not send');
       })
       .catch(function (err) {
+        if (done && !(err && err.message && /activat/i.test(err.message))) return;
+        done = true; clearTimeout(timer);
         var network = err instanceof TypeError; // fetch blocked or offline
         var msg = !network && err && err.message && err.message !== 'Could not send' ? err.message : '';
         if (/activat/i.test(msg)) {
