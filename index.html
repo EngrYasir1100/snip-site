@@ -34,7 +34,7 @@
 
 <h2 id="contact">Support</h2>
 <p>Found a bug, have an idea, or need help? Send us a message. We usually reply within 48 hours.</p>
-<form class="card" action="https://formsubmit.co/yasirakbar196@gmail.com" method="POST">
+<form class="card" id="support-form" action="https://formsubmit.co/yasirakbar196@gmail.com" method="POST">
   <!-- FormSubmit settings: emails each message to the address above. -->
   <input type="hidden" name="_subject" value="Snip support request">
   <input type="hidden" name="_template" value="table">
@@ -67,7 +67,41 @@
   <label>Message<textarea name="message" required maxlength="4000" placeholder="Tell us what happened, and what you expected."></textarea></label>
   <p class="hint">We only use your email to reply to you. Please don't include card numbers or passwords.</p>
   <button class="btn" type="submit">Send message</button>
+  <p class="hint" id="form-status" role="status" aria-live="polite"></p>
 </form>
+<script>
+// Send in the background so visitors never see FormSubmit's own page.
+// Without JavaScript the form still posts normally.
+(function () {
+  var form = document.getElementById('support-form');
+  var status = document.getElementById('form-status');
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var btn = form.querySelector('button[type=submit]');
+    var data = {};
+    new FormData(form).forEach(function (v, k) { data[k] = v; });
+    if (data._honey) return; // bot
+    delete data._next; delete data._honey;
+    btn.disabled = true; btn.textContent = 'Sending…'; status.textContent = '';
+    fetch(form.action.replace('formsubmit.co/', 'formsubmit.co/ajax/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(data)
+    })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (res.ok && String(res.j.success) === 'true') { window.location.href = 'thanks.html'; return; }
+        throw new Error(res.j.message || 'Could not send');
+      })
+      .catch(function (err) {
+        btn.disabled = false; btn.textContent = 'Send message';
+        var msg = err && err.message && err.message !== 'Could not send' ? err.message : '';
+        // Before the form is activated, FormSubmit explains that here (shown once, to the site owner).
+        status.textContent = /activat/i.test(msg) ? msg : "Sorry, that didn't send. Please try again in a minute.";
+      });
+  });
+})();
+</script>
 
 <h2>FAQ</h2>
 <details><summary>How do I cancel Snip Pro?</summary><p>On iPhone, go to Settings › your name › Subscriptions › Snip › Cancel Subscription. Cancel at least 24 hours before renewal to avoid being charged again. On Android, open the Play Store › your profile picture › Payments &amp; subscriptions › Subscriptions › Snip › Cancel subscription, or go to <a href="https://play.google.com/store/account/subscriptions">play.google.com/store/account/subscriptions</a>.</p></details>
